@@ -1,7 +1,14 @@
-Change log $Id: CHANGELOG,v 1.2 2006/08/16 23:53:30 pharscape Exp $
+Change log $Id: CHANGELOG,v 1.3 2006/10/20 14:30:19 pharscape Exp $
 ==========
 Changes to comgt
 ================
+Fri Oct. 20th 2006 Paul Hardwick
+    - Scripts distributed with package are now located in scripts sub-directory
+    - Install now copies scripts to /etc/comgt see scripts/README for list of scripts
+    - comgt now implements search priority order for scripts - 1)internal, 2)working directory, 3)/etc/comgt
+    - Added search path for device - /dev/noz2, /dev/ttyUSB2, /dev/modem so -d option is not needed in most cases
+    - Added APN and PIN scripts which use environment variables to set these values - see man page
+
 Wed Aug 16 2006 Paul Hardwick
     - For copyright reasons Project and Application now called comgt
     - Adding CVS version control keywords in preparation for initial Sourceforge import

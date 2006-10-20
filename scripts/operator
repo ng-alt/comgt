@@ -24,8 +24,11 @@
 ###########################################################################
 
 ############################################################################
-# $Id: operator,v 1.1.1.1 2006/08/16 21:21:31 pharscape Exp $
+# $Id: operator,v 1.1 2006/10/20 14:19:54 pharscape Exp $
 # $Log: operator,v $
+# Revision 1.1  2006/10/20 14:19:54  pharscape
+# Added scripts directory - expected operational location will /etc/comgt/
+#
 # Revision 1.1.1.1  2006/08/16 21:21:31  pharscape
 # intial CVS import
 #

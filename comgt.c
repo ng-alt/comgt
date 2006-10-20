@@ -22,7 +22,7 @@
  */
 
  /***************************************************************************
-* $Id: comgt.c,v 1.3 2006/08/16 23:53:30 pharscape Exp $
+* $Id: comgt.c,v 1.4 2006/10/20 14:30:19 pharscape Exp $
  ****************************************************************************/
 
 
@@ -54,6 +54,7 @@
 #define BOOL unsigned char
 #define NVARS 286       /* a-z, a0-z9 == 26*11 */
 
+
 extern char *optarg;
 extern int optind, opterr;
 FILE *filep;
@@ -78,6 +79,7 @@ int speed=B0; /* Set to B110, B150, B300,..., B38400 */
 char device[MAXPATH]; /* Comm device.  May be "-" */
 char token[MAXTOKEN];   /* For gettoken() returns */
 char scriptfile[MAXPATH]; /* Script file name */
+char scriptfilepath[MAXPATH]; /* temp storage for full path */
 BOOL verbose=0; /* Log actions */
 struct termio cons, stbuf, svbuf;  /* termios: svbuf=before, stbuf=while */
 int comfd=0; /* Communication file descriptor.  Defaults to stdin. */
@@ -133,6 +135,11 @@ void doclose(void);
 void opendevice(void);
 void doopen(void);
 int doscript(void);
+
+
+char GTdevice[4][20] = {"/dev/noz2",
+                        "/dev/ttyUSB2",
+                        "/dev/modem",""}; /* default device names to search for */
 
 /* Returns hundreds of seconds */
 unsigned long htime(void) {
@@ -1238,18 +1245,32 @@ void doclose(void) {
 }
 
 void opengt(void) {
-  if(strcmp(device,"-")!=0) {
+  int dcount = 0;
+    
+  if(strcmp(device,"-")==0) { //no device on command line or env so try the list of devices
+    printf("Trying list of devices\n");
+    do{
+        strcpy(device,GTdevice[dcount]);
+        if ((comfd = open(device, O_RDWR|O_EXCL|O_NONBLOCK|O_NOCTTY)) >= 0)break;
+        dcount++;
+        }while(strlen(GTdevice[dcount]));
+        if (comfd < 0){
+          printf("Unable to locate default devices, try the -d option.\n");
+          ext(1);
+        }
+    }
+  else {
     if ((comfd = open(device, O_RDWR|O_EXCL|O_NONBLOCK|O_NOCTTY)) <0) { //O_NONBLOCK|O_NOCTTY)) <0) {//
-      sprintf(msg,"Can't open GlobeTrotter %s.\n",device);
+      sprintf(msg,"Can't open device %s.\n",device);
       printf(msg);
       ext(1);
     }
   }
-  else comfd=0;
   if (ioctl (comfd, TCGETA, &svbuf) < 0) {
     sprintf(msg,"Can't control %s, please try again.\n",device);
     serror(msg,1);
   }
+  setenv("COMGTDEVICE",device,1);
   ioctl(comfd, TCGETA, &stbuf);
   speed=stbuf.c_cflag & CBAUD;
   if (high_speed == 0)  strcpy(cspeed,"115200");
@@ -1272,6 +1293,7 @@ void opengt(void) {
 }
 
 void opendevice(void) {
+
   if(strcmp(device,"-")!=0) {
     if ((comfd = open(device, O_RDWR|O_EXCL|O_NONBLOCK|O_NOCTTY)) <0) { //O_NONBLOCK|O_NOCTTY)) <0) {//
       sprintf(msg,"Can't open device %s.\n",device);
@@ -1280,6 +1302,7 @@ void opendevice(void) {
     }
   }
   else comfd=0;
+
   if (ioctl (comfd, TCGETA, &svbuf) < 0) {
     sprintf(msg,"Can't ioctl get device %s.\n",device);
     serror(msg,1);
@@ -1514,9 +1537,15 @@ int main(int argc,char **argv) {
   int aa,b,i,skip_default;
   unsigned char ch;
   unsigned char terminator='\n';
-  char line[STRINGL];
+  char *devenv,line[STRINGL];
 
-  strcpy(device,GTDEVICE);
+  //Load up the COMGT device env variable if it exists
+  devenv = getenv("COMGTDEVICE");
+  if (devenv != NULL && strlen(devenv)){
+  strcpy(device,devenv);
+  }
+  else strcpy(device,"-");
+
   FILE *fp;
   hstart=time(0);
   hset=htime();
@@ -1591,7 +1620,7 @@ int main(int argc,char **argv) {
   if (code != NULL){
     scriptspace=strlen(code)+2;
     if((script=( char *)realloc(script,scriptspace))==0) {
-       serror("Could not malloc()",3);
+       serror("Could not allocate memory for script.",3);
        }
        strcpy(script,code);
       for(aa=0;aa<scriptspace;aa++) {
@@ -1613,8 +1642,12 @@ int main(int argc,char **argv) {
       //scriptfile[0] = '\0';
     }
     if((fp=fopen(scriptfile,"r"))==NULL) {
-      sprintf(msg,"Could not open scriptfile \"%s\".\n",scriptfile);
-      serror(msg,1);
+		strcpy(scriptfilepath,"/etc/comgt/");
+		strcat(scriptfilepath,scriptfile);
+		if((fp=fopen(scriptfilepath,"r"))==NULL) {
+      		sprintf(msg,"Could not open scriptfile \"%s\".\n",scriptfile);
+      		serror(msg,1);
+		}
     }
     i=strlen(script);
     if(i) {

@@ -1,6 +1,6 @@
 .\" Paul Hardwick 
 .\" paul@peck.org.uk
-.TH comgt 1 "05 July, 2006"
+.TH comgt 1 "20 October, 2006"
 .LO 1
 .SH NAME
 comgt  \- Option GlobeTrotter GPRS/EDGE/3G/HSDPA  and Vodafone 3G/GPRS datacard control tool
@@ -8,16 +8,18 @@ comgt  \- Option GlobeTrotter GPRS/EDGE/3G/HSDPA  and Vodafone 3G/GPRS datacard 
 .B comgt
 .RB \-d 
 .I "device" 
-.RB -ehstvx
+.RB -ehstvVx
 .I "script"
 .SH OPTIONS
 .in +5
 .B \-d 
 .I device
 .in +10
-set the device to be used to communicate with the data-card.
-Defaults to 
-.I /dev/modem
+set the device to be used to communicate with the data-card. 
+If not specified then comgt trys
+.I /dev/noz2, /dev/ttyUSB2
+and then 
+.I/dev/modem
 .PP
 .in +5
 .B \-e 
@@ -46,6 +48,11 @@ change to an alternate line terminator (default "\n").
 .in +10
 run in verbose mode. This traces scripts as they are executed. 
 It is intended to help in debugging scripts.
+.PP
+.in +5
+.B \-V 
+.in +10
+Print Version information.
 .PP
 .in +5
 .B \-x
@@ -107,6 +114,8 @@ invoked in the same way. The "standard" scripts are built into
 .B comgt
 and will work for serially connected modems, built-in modems, PCMCIA modems
 as well as the GlobeTrotter GPRS and the Vodafone 3G/GPRS datacards.
+.
+There is a search priority order for scripts - 1)internal, 2)working directory, 3)/etc/comgt
 .PP
 .SS Built-in scripts
 
@@ -181,6 +190,16 @@ Switch to 900/1900 MHz band for USA operation. GlobeTrotter GPRS datacards only.
 .in +5
 Switch to 900/1800 MHz band for European operation. GlobeTrotter GPRS datacards only. 
 
+.in -5
+.I comgt PIN 
+.in +5
+Test the SIM PIN status and use the environment variable COMGTPIN as the value . 
+
+.in -5
+.I comgt APN 
+.in +5
+Set the APN of the datacard to the value contained in the COMGTAPN environment variable. 
+
 .PP
 .SS Custom Scripts
 
@@ -249,7 +268,7 @@ read:
 .PP
 .in +5
 .nf
-pppd connect \'comgt /root/scripts/isp.scr\' /dev/cua1 38400 \\
+pppd connect \'comgt -s /root/scripts/isp.scr\' /dev/cua1 38400 \\
      debug crtscts modem defaultroute
 .fi
 .in -5
@@ -1197,6 +1216,12 @@ if $t = "00:00:00" print "Oh god!  It\'s Twinkee time!\\n"
 .SH KNOWN "FEATURES"
 The getvalue() parser.  It makes me laugh so I think I\'ll leave it that way.
 - Daniel.Chouinard@pwc.utc.com
+.
+.
+.SH ENVIRONMENT VARIABLES
+.PP
+COMGTPIN - the 4 digit pin of the SIM for use by PIN script
+COMGTAPN - the APN to write to the data card, used by the APN script.
 .
 .SH AUTHORS
 .PP

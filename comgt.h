@@ -20,9 +20,9 @@
  ***************************************************************************/
 
 /***************************************************************************
-* $Id: comgt.h,v 1.3 2006/08/16 23:53:30 pharscape Exp $
+* $Id: comgt.h,v 1.4 2006/10/20 14:30:19 pharscape Exp $
 ****************************************************************************/
-#define COMGT_VERSION "0.31"
+#define COMGT_VERSION "0.32"
 #define YEARS "2005,2006"
 
 char _default_code[] =
@@ -46,7 +46,7 @@ char _default_code[] =
     print \"Check device port configuration.\nCheck SIM is inserted\nTest SIM in a mobile phone?\n\"\n\
     exit 1\n\
   :getpin\n\
-    #handle case where Vodafone 3 generates wrong response\n\
+    #handle case where original Vodafone 3G generates wrong response\n\
     waitfor 1 \"2\"\n\
     if % = 0 goto ready\n\
     print \"\nEnter PIN number: \"\n\
@@ -134,17 +134,33 @@ char _default_code[] =
     waitquiet 1 0.1\n";
 
 char _info_code[]  =
-    "print \"##### GlobeTrotter Configuration #####\\n\"\n\
+    "print \"##### Wireless WAN Modem Configuration #####\\n\"\n\
     opengt\n\
     set com 115200n81\n\
     set senddelay 0.05\n\
     waitquiet 2 0.5\n\
-  :manf\n\
-    print \"Manufacturer Text:      \"\n\
-    send \"AT+cgmi^m\"\n\
-    get 2 \" ^m\" $s\n\
-    get 2 \" ^m\" $s\n\
+  :name\n\
+    print \"Product text:\n====\n\"\n\
+    send \"ATi^m\"\n\
+    get 1 \" ^m\" $s\n\
+  :more\n\
+    get 1 \"^m\" $s\n\
     let x=len($s)\n\
+    if $s=\"OK\n\" goto manf\n\
+    #dump\n\
+    if x<1 goto manf\n\
+    if $s=\"\n\" goto more\n\
+    print $s\n\
+    goto more\n\
+  :manf\n\
+    print \"\n====\n\"\n\
+    waitquiet 2 0.1\n\
+    print \"Manufacturer:           \"\n\
+    send \"AT+cgmi^m\"\n\
+    get 1 \"^m\" $s\n\
+    get 1 \"^m\" $s\n\
+    let x=len($s)\n\
+    if x<1 goto imei_serial\n\
     dec x\n\
     let $s=$right($s,x)\n\
     print $s,\"\\n\"\n\
@@ -152,8 +168,8 @@ char _info_code[]  =
     waitquiet 5 0.1\n\
     print \"IMEI and Serial Number: \"\n\
     send \"AT+GSN^m\"\n\
-    get 2 \" ^m\" $s\n\
-    get 2 \" ^m\" $s\n\
+    get 2 \"^m\" $s\n\
+    get 2 \"^m\" $s\n\
     let x=len($s)\n\
     dec x\n\
     let $s=$right($s,x)\n\
@@ -162,9 +178,12 @@ char _info_code[]  =
     waitquiet 5 0.1\n\
     print \"Manufacturer\'s Revision: \"\n\
     send \"AT+GMR^m\"\n\
-    get 2 \" ^m\" $s\n\
-    get 2 \" ^m\" $s\n\
     get 2 \"^m\" $s\n\
+    get 2 \"^m\" $s\n\
+    let x=len($s)\n\
+    dec x\n\
+    dec x\n\
+    let $s=$left($s,x)\n\
     print $s,\"\\n\"\n\
   :hardware\n\
     waitquiet 5 0.1\n\
@@ -200,10 +219,10 @@ char _info_code[]  =
     if $s=\"4\" print \"Europe 900/1800MHz \"\n\
     if $s=\"5\" print \"USA 900/1900MHz \"\n\
     print \"(\",$s,\")\\n\" \n\
-  :autoattach\n\
+  :apn\n\
     waitquiet 5 0.1\n\
-    print \"Auto Attach:            \"\n\
-    send \"AT_OCGAA?^m\"\n\
+    print \"APN:                    \"\n\
+    send \"AT+CGDCONT?^m\"\n\
     get 2 \" ^m\" $s\n\
     get 2 \" ^m\" $s\n\
     get 2 \" ^m\" $s\n\
@@ -381,7 +400,93 @@ char _GTEDGE_code[] =
     send \"AT+CFUN=1^m\"\n\
     waitquiet 5 0.2";
 
+char _SETPIN_code[]=
+    "opengt\n\
+    set com 115200n81\n\
+    set senddelay 0.05\n\
+    waitquiet 1 0.2\n\
+  :start\n\
+    flash 0.1\n\
+    send \"AT+CPIN?^m\"\n\
+    waitfor 30 \"SIM PUK\",\"SIM PIN\",\"READY\",\"ERROR\",\"ERR\"\n\
+    if % = -1 goto error\n\
+    if % = 0 goto ready\n\
+    if % = 1 goto getpin\n\
+    if % = 2 goto ready\n\
+    if % = 3 goto error\n\
+    if % = 4 goto error\n\
+  :error\n\
+    print $s,\" ***SIM ERROR***\n\"\n\
+    print \"Check device port configuration.\nCheck SIM is inserted\nTest SIM in a mobile phone?\n\"\n\
+    exit 1\n\
+  :getpin\n\
+    #handle case where original Vodafone 3G generates wrong response\n\
+    let $x=$env(\"COMGTPIN\")\n\
+    let a=len($x)\n\
+    if a=0 goto pinenverr\n\
+    if a<>4 goto pinerror\n\
+    let c=0\n\
+  :test\n\
+    let $c=$mid($x,c,1)\n\
+    if $c<\"0\" goto pinerror\n\
+    if $c>\"9\" goto pinerror\n\
+    inc c\n\
+    if c<4 goto test\n\
+    let a=val($x)\n\
+    if a<0 goto pinerror\n\
+    if a>9999 goto pinerror\n\
+    let $c=$left($x,4)\n\
+  :enterpin\n\
+    send \"AT+CPIN=\\\"\"\n\
+    send $c\n\
+    send \"\\\"^m\"\n\
+    waitfor 20 \"OK\",\"ERR\"\n\
+    if % = -1 goto timeerror\n\
+    if % = 0 goto ready\n\
+    if % = 1 goto pinerror\n\
+  :pinenverr\n\
+    print \"ERROR: The COMGTPIN env variable is not set\n\"\n\
+    exit 1\n\
+  :pinerror\n\
+    print \"ERROR: PIN code must be 4 decimal digits only\n\"\n\
+    print \"Caution! - entering the wrong PIN code three times will lock the SIM\n\"\n\
+    exit 1\n\
+  :timeerror\n\
+    print \"ERROR: timeout, device did not respond to PIN command entry.\n\"\n\
+    exit 1\n\
+  :ready\n\
+    print \"SIM ready\n\"\n";
 
+char _SETAPN_code[]=
+    "opengt\n\
+    set com 115200n81\n\
+    set senddelay 0.05\n\
+    waitquiet 1 0.2\n\
+  :start\n\
+    flash 0.1\n\
+  :getapn\n\
+    let $x=$env(\"COMGTAPN\")\n\
+    let a=len($x)\n\
+    if a=0 goto apnerror\n\
+    if a>32 goto apnerror\n\
+  :enterapn\n\
+    send \"AT+CGDCONT=1,\\\"IP\\\",\\\"\n\
+    send $c\n\
+    send \"\\\"^m\"\n\
+    waitfor 20 \"OK\",\"ERR\"\n\
+    if % = -1 goto timeerror\n\
+    if % = 0 goto OK\n\
+    if % = 1 goto apnerror\n\
+  :apnerror\n\
+    print \"ERROR entering APN\n\"\n\
+    print \"The COMGTAPN env variable is not set\n\"\n\
+    exit 1\n\
+  :timeerror\n\
+    print \"ERROR entering APN\n\"\n\
+    print \"The device timeout.\n\"\n\
+    exit 1\n\
+  :OK\n\
+    exit 0\n";
 
 
 char _help_code[]  =\
@@ -394,12 +499,14 @@ char _help_code[]  =\
     print \"  comgt info                Display configuration of datacard.\n\"\n\
     print \"  comgt sig                 Report Signal strength.\n\"\n\
     print \"  comgt reg                 Report Registration status.\n\"\n\
+    print \"  comgt PIN                 Set PIN using COMGTPIN env variable.\n\"\n\
+    print \"  comgt APN                 Set APN using COMGTAPN env variable.\n\"\n\
     print \"\n  Valid for GlobeTrotter GPRS only:\n\"\n\
     print \"      comgt USA                 Switch to 900/1900 MHz band for USA operation.\n\"\n\
     print \"      comgt Europe              Switch to 900/1800 MHz band for Europen operation.\n\"\n\
     print \"\n  Valid for GlobeTrotter EDGE and Combo EDGE only:\n\"\n\
     print \"      comgt GTEDGE             Switch on radio interface.\n\"\n\
-    print \"\n  Valid for Vodafone 3G, GlobeTrotter Fusion :\n\"\n\
+    print \"\n  Valid for Vodafone 3G, GlobeTrotter Fusion, GT Max :\n\"\n\
     print \"      comgt 2G             2G networks only.\n\"\n\
     print \"      comgt 3G             3G networks only\n\"\n\
     print \"      comgt 3G2G           3G network preferred\n\"\n\
@@ -434,6 +541,8 @@ char *get_code(char* name){
   if (strcmp(name,"2G")==0) return (_2G_mode_code);
   if (strcmp(name,"3G")==0) return (_3G_mode_code);
   if (strcmp(name,"3G2G")==0) return (_3G2G_mode_code);
+  if (strcmp(name,"PIN")==0) return (_SETPIN_code);
+  if (strcmp(name,"APN")==0) return (_SETAPN_code);
   return(NULL);
 }
 
