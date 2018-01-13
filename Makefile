@@ -19,61 +19,34 @@
 #
 #    martin@gregorie.org, paul@peck.org.uk
 #
-#    $Id: Makefile,v 1.4 2006/10/20 14:30:19 pharscape Exp $
+#    $Id: Makefile,v 1.2 2009-02-09 06:58:39 michael Exp $
 #
 #
 
-LIB     = -L/usr/local/lib
-INC     = -I/usr/local/include
-EXE	= /usr/local/bin
-MAN     = /usr/share/man/man1
 CPROG	= comgt
-SCRIPTPATH = /etc/comgt/
-SCRIPTSRC = ./scripts/
-BIN     = $(CPROG) 
-MANP	= comgt.1 sigmon.1
 
-CFLAGS  = -c
-LDFLAGS =
-
-all: $(BIN)
+all: $(CPROG)
 
 install:
-	chmod a-w $(BIN)
-	chmod u+rw $(BIN)
-	chmod a+x $(BIN)
-	cp $(BIN) $(EXE)
-	chmod a-wx $(MANP)
-	chmod u+rw $(MANP)
-	chmod a+r $(MANP)
-	cp $(MANP) $(MAN)
-	-mkdir $(SCRIPTPATH)
-	chmod a-w $(SCRIPTPATH)
-	chmod u+rw $(SCRIPTPATH)
-	chmod a+x $(SCRIPTPATH)
-	cp -f $(SCRIPTSRC)* $(SCRIPTPATH)
-	chmod a-w $(SCRIPTPATH)*
-	chmod u+rw $(SCRIPTPATH)*
-	chmod a+x $(SCRIPTPATH)*
-
-
-
-
-uninstall:
-	cd $(EXE); rm $(BIN)
-	cd $(MAN); rm $(MANP)
-	-rm -r $(SCRIPTPATH)
+	install -D $(CPROG) $(INSTALLDIR)/bin/$(CPROG)
+	install -D scripts/sigmon $(INSTALLDIR)/sbin/sigmon
+	install -D scripts/read_sms $(INSTALLDIR)/sbin/read_sms
+	install -D scripts/send_sms $(INSTALLDIR)/sbin/send_sms
+	rm -rf $(INSTALLDIR)/rom/etc/ppp/3g
+	mkdir -p $(INSTALLDIR)/rom/etc/ppp/3g
+	cp -rf scripts/devices/* $(INSTALLDIR)/rom/etc/ppp/3g/
+	install -D scripts/command $(INSTALLDIR)/rom/etc/ppp/3g/command
+	install -D scripts/dump $(INSTALLDIR)/rom/etc/ppp/3g/dump
+	install -D scripts/operator $(INSTALLDIR)/rom/etc/ppp/3g/operator
+	install -D scripts/getinfo $(INSTALLDIR)/rom/etc/ppp/3g/getinfo
 
 clean:
-	-rm *.o 
-	-rm $(CPROG) 
-	-rm *~
-	-rm $(SCRIPTSRC)*~
-
+	rm -f *.o $(CPROG)
 
 comgt: comgt.o
-	cc comgt.o $(LDFLAGS) -o comgt
+	$(CC) $^ $(LDFLAGS) -o $@
+	$(STRIP) $@
 
 comgt.o: comgt.c comgt.h
-	cc comgt.c $(CFLAGS) 
+	$(CC) -c comgt.c $(CFLAGS) 
 

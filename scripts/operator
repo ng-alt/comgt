@@ -24,8 +24,11 @@
 ###########################################################################
 
 ############################################################################
-# $Id: operator,v 1.1 2006/10/20 14:19:54 pharscape Exp $
+# $Id: operator,v 1.1 2008-12-04 12:29:16 michael Exp $
 # $Log: operator,v $
+# Revision 1.1  2008-12-04 12:29:16  michael
+# comgt, 2G/3G utility
+#
 # Revision 1.1  2006/10/20 14:19:54  pharscape
 # Added scripts directory - expected operational location will /etc/comgt/
 #
